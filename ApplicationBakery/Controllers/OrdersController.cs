@@ -1,26 +1,27 @@
 ﻿using ApplicationBakery.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApplicationBakery.Controllers
 {
-    public class CustomersController : Controller
+    public class OrdersController : Controller
     {
         private readonly AppBakeryContext _context;
 
-        public CustomersController(AppBakeryContext context)
+        public OrdersController(AppBakeryContext context)
         {
             _context = context;
         }
 
-        // GET: Customers
+        // GET: Orders
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Customers.ToListAsync());
-
+            var appBakeryContext = _context.Orders.Include(o => o.Customer);
+            return View(await appBakeryContext.ToListAsync());
         }
 
-        // GET: Customers/Details/5
+        // GET: Orders/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -28,76 +29,32 @@ namespace ApplicationBakery.Controllers
                 return NotFound();
             }
 
-            var customer = await _context.Customers
+            var order = await _context.Orders
+                .Include(o => o.Customer)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (customer == null)
+            if (order == null)
             {
                 return NotFound();
             }
 
-            return View(customer);
+            return View(order);
         }
 
-        // GET: Customers/Create
+        // GET: Orders/Create
         public IActionResult Create()
         {
+            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Name");
             return View();
         }
 
-        // POST: Customers/Create
+        // POST: Orders/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Address,Phone")] Customer customer)
+        public async Task<IActionResult> Create([Bind("Id,Description,OrderDate,CustomerId")] Order order)
         {
-            if (ModelState.IsValid)
-            {
-                //esto te ayudo a ver el error especifico
-                foreach (var key in ModelState.Keys)
-                {
-                    var state = ModelState[key];
-                    foreach (var error in state.Errors)
-                    {
-                        Console.WriteLine($"Key: {key}, Error: {error.ErrorMessage}"); //recuerda esto ayuda a ver mensaje de error en la consola
-                    }
-                }
-
-            }
-            _context.Add(customer);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-
-        }
-
-
-        // GET: Customers/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer == null)
-            {
-                return NotFound();
-            }
-            return View(customer);
-        }
-
-        // POST: Customers/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Address,Phone")] Customer customer)
-        {
-            if (id != customer.Id)
-            {
-                return NotFound();
-            }
-
             if (!ModelState.IsValid)
             {
-
+                // Diagnóstico de errores en el ModelState
                 foreach (var key in ModelState.Keys)
                 {
                     var state = ModelState[key];
@@ -106,16 +63,62 @@ namespace ApplicationBakery.Controllers
                         Console.WriteLine($"Key: {key}, Error: {error.ErrorMessage}");
                     }
                 }
+                ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Name", order.CustomerId);
             }
+            _context.Add(order);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        // GET: Orders/Edit/5
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
+            {
+                return NotFound();
+            }
+            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Name", order.CustomerId);
+            return View(order);
+        }
+
+        // POST: Orders/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Description,OrderDate,CustomerId")] Order order)
+        {
+            if (id != order.Id)
+            {
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                foreach (var key in ModelState.Keys)
+                {
+                    var state = ModelState[key];
+                    foreach (var error in state.Errors)
+                    {
+                        Console.WriteLine($"Key: {key}, Error: {error.ErrorMessage}");
+                    }
+                }
+                ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Name", order.CustomerId);
+            }
+
 
             try
             {
-                _context.Update(customer);
-                await _context.SaveChangesAsync();  // Guarda los cambios en la base de datos
+                _context.Update(order);
+                await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!CustomerExists(customer.Id))
+                if (!OrderExists(order.Id))
                 {
                     return NotFound();
                 }
@@ -125,46 +128,50 @@ namespace ApplicationBakery.Controllers
                 }
             }
             return RedirectToAction(nameof(Index));
-        }
-        //metodo que añadi para probar (Ver si el customer existe)
-        private bool CustomerExists(int id)
-        {
-            return _context.Customers.Any(e => e.Id == id);
+
         }
 
-
-        // GET: Customers/Delete/5
+        // GET: Orders/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Orders == null)
             {
                 return NotFound();
             }
 
-            var customer = await _context.Customers
+            var order = await _context.Orders
+                .Include(o => o.Customer)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (customer == null)
+            if (order == null)
             {
                 return NotFound();
             }
 
-            return View(customer);
+            return View(order);
         }
 
-        // POST: Customers/Delete/5
+        // POST: Orders/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer == null)
+            if (_context.Orders == null)
             {
-                return NotFound();
+                return Problem("Entity set 'AppBakeryContext.Orders'  is null.");
+            }
+            var order = await _context.Orders.FindAsync(id);
+            if (order != null)
+            {
+                _context.Orders.Remove(order);
             }
 
-            _context.Customers.Remove(customer);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        private bool OrderExists(int id)
+        {
+            return (_context.Orders?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }

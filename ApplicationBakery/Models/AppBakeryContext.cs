@@ -17,7 +17,7 @@ namespace ApplicationBakery.Models
             //primary key
             #region "Primary Key"
             modelBuilder.Entity<Customer>()
-                .HasKey(customer => customer.Id); //Lambda Where
+                .HasKey(customer => customer.Id); //lambda Where
             modelBuilder.Entity<Order>()
                 .HasKey(oder => oder.Id);
             #endregion
@@ -59,6 +59,10 @@ namespace ApplicationBakery.Models
                 .Property(order => order.Description)
                 .IsRequired()
                 .HasMaxLength(100);
+
+            modelBuilder.Entity<Order>()
+                .Property(order => order.CustomerId)
+                .IsRequired();
             #endregion
 
 
